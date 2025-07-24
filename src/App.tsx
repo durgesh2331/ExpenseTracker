@@ -28,14 +28,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="transactions" element={<Transactions />} />
-              <Route path="transactions/new" element={<TransactionForm />} />
-              <Route path="transactions/edit/:id" element={<TransactionForm />} />
-              <Route path="salary" element={<Salary />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<Settings />} />
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/transactions/new" element={<TransactionForm />} />
+              <Route path="/transactions/edit/:id" element={<TransactionForm />} />
+              <Route path="/salary" element={<Salary />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
