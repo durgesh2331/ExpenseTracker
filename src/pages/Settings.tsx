@@ -1,10 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, User, Shield } from 'lucide-react';
+import { CurrencySelector } from '@/components/ui/currency-selector';
+import { useCurrency } from '@/hooks/use-currency';
+import { LogOut, User, Shield, DollarSign } from 'lucide-react';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { currency, updateCurrency, loading: currencyLoading } = useCurrency();
 
   const handleSignOut = () => {
     signOut();
@@ -37,6 +40,30 @@ const Settings = () => {
             <p className="text-foreground">
               {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Currency Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+              Preferred Currency
+            </label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Choose your preferred currency for displaying amounts throughout the app.
+            </p>
+            <CurrencySelector
+              value={currency}
+              onValueChange={updateCurrency}
+              className="max-w-md"
+            />
           </div>
         </CardContent>
       </Card>
