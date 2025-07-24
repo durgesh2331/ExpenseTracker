@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { CurrencySelector } from '@/components/ui/currency-selector';
+import { useCurrency } from '@/hooks/use-currency';
 
 const EXPENSE_CATEGORIES = [
   'Food & Dining',
@@ -38,12 +40,14 @@ const TransactionForm = () => {
   const { id } = useParams();
   const isEditing = !!id;
 
+  const { currency: userCurrency } = useCurrency();
   const [formData, setFormData] = useState({
     type: 'expense' as 'income' | 'expense',
     amount: '',
     category: '',
     note: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    currency: userCurrency
   });
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +56,12 @@ const TransactionForm = () => {
       fetchTransaction();
     }
   }, [isEditing, id]);
+
+  useEffect(() => {
+    if (userCurrency && !isEditing) {
+      setFormData(prev => ({ ...prev, currency: userCurrency }));
+    }
+  }, [userCurrency, isEditing]);
 
   const fetchTransaction = async () => {
     const { data, error } = await supabase
@@ -74,7 +84,8 @@ const TransactionForm = () => {
         amount: data.amount.toString(),
         category: data.category,
         note: data.note || '',
-        date: new Date(data.date).toISOString().split('T')[0]
+        date: new Date(data.date).toISOString().split('T')[0],
+        currency: data.currency || userCurrency
       });
     }
   };
@@ -89,7 +100,8 @@ const TransactionForm = () => {
       amount: parseFloat(formData.amount),
       category: formData.category,
       note: formData.note || null,
-      date: new Date(formData.date).toISOString()
+      date: new Date(formData.date).toISOString(),
+      currency: formData.currency
     };
 
     let error;
@@ -175,6 +187,14 @@ const TransactionForm = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <CurrencySelector
+                value={formData.currency}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
+              />
             </div>
 
             <div className="space-y-2">

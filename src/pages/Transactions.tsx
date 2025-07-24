@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/currency';
 import {
   Table,
   TableBody,
@@ -23,6 +24,7 @@ interface Transaction {
   category: string;
   note: string | null;
   date: string;
+  currency: string;
 }
 
 const Transactions = () => {
@@ -149,7 +151,7 @@ const Transactions = () => {
                     <TableCell className={`text-right font-medium ${
                       transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {transaction.type === 'income' ? '+' : '-'}${Number(transaction.amount).toFixed(2)}
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Number(transaction.amount), transaction.currency)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

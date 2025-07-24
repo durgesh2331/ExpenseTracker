@@ -3,6 +3,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { formatCurrency } from '@/lib/currency';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface Profile {
   monthly_salary: number;
@@ -14,10 +16,19 @@ interface Transaction {
   amount: number;
   category: string;
   date: string;
+  currency: string;
+}
+
+interface CurrencySummary {
+  currency: string;
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
 }
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { currency: userCurrency } = useCurrency();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,15 +69,42 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+  // Group transactions by currency
+  const currencySummaries = transactions.reduce((acc, transaction) => {
+    const currency = transaction.currency;
+    if (!acc[currency]) {
+      acc[currency] = {
+        currency,
+        totalIncome: 0,
+        totalExpenses: 0,
+        balance: 0
+      };
+    }
+    
+    if (transaction.type === 'income') {
+      acc[currency].totalIncome += Number(transaction.amount);
+    } else {
+      acc[currency].totalExpenses += Number(transaction.amount);
+    }
+    
+    return acc;
+  }, {} as Record<string, CurrencySummary>);
 
-  const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+  // Calculate balances and add monthly salary to user's default currency
+  Object.values(currencySummaries).forEach(summary => {
+    summary.balance = summary.totalIncome - summary.totalExpenses;
+    if (summary.currency === userCurrency) {
+      summary.balance += (profile?.monthly_salary || 0);
+    }
+  });
 
-  const remainingBalance = (profile?.monthly_salary || 0) + totalIncome - totalExpenses;
+  const summariesArray = Object.values(currencySummaries);
+  const primarySummary = currencySummaries[userCurrency] || {
+    currency: userCurrency,
+    totalIncome: 0,
+    totalExpenses: 0,
+    balance: (profile?.monthly_salary || 0)
+  };
 
   if (loading) {
     return (
@@ -93,7 +131,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${(profile?.monthly_salary || 0).toFixed(2)}
+              {formatCurrency(profile?.monthly_salary || 0, userCurrency)}
             </div>
           </CardContent>
         </Card>
@@ -105,8 +143,17 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${totalIncome.toFixed(2)}
+              {formatCurrency(primarySummary.totalIncome, userCurrency)}
             </div>
+            {summariesArray.length > 1 && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {summariesArray.filter(s => s.currency !== userCurrency).map(summary => (
+                  <div key={summary.currency}>
+                    {formatCurrency(summary.totalIncome, summary.currency)}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -117,20 +164,38 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              ${totalExpenses.toFixed(2)}
+              {formatCurrency(primarySummary.totalExpenses, userCurrency)}
             </div>
+            {summariesArray.length > 1 && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {summariesArray.filter(s => s.currency !== userCurrency).map(summary => (
+                  <div key={summary.currency}>
+                    {formatCurrency(summary.totalExpenses, summary.currency)}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Remaining Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Balance</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${remainingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${remainingBalance.toFixed(2)}
+            <div className={`text-2xl font-bold ${primarySummary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(primarySummary.balance, userCurrency)}
             </div>
+            {summariesArray.length > 1 && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {summariesArray.filter(s => s.currency !== userCurrency).map(summary => (
+                  <div key={summary.currency} className={summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {formatCurrency(summary.balance, summary.currency)}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -155,7 +220,7 @@ const Dashboard = () => {
                   <div className={`font-bold ${
                     transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {transaction.type === 'income' ? '+' : '-'}${Number(transaction.amount).toFixed(2)}
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Number(transaction.amount), transaction.currency)}
                   </div>
                 </div>
               ))}
